@@ -1,0 +1,17 @@
+{
+  "scripts": {
+    "start": "node express.js",
+    "dev": "nodemon express.js"
+  },
+  "dependencies": {
+    "@retconned/kick-js": "^0.5.2",
+    "axios": "^1.7.9",
+    "express": "^4.21.0",
+    "socket.io": "^4.8.0",
+    "sqlite3": "^5.1.7",
+    "tiktok-live-connector": "^1.2.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
