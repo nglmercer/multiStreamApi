@@ -309,7 +309,13 @@ class Logger {
   // Escribir una línea en el archivo de log
   async writeLineToLog(line) {
       if (!this.enabled) return;
-
+      // verificar que si lines es promise resolverlo y si es objeto pasarlo a string
+      if (line instanceof Promise) {
+          line = await line;
+      }
+      if (typeof line !== "string") {
+          line = line.toString();
+      }
       const fileName = this.getLastLogFileName();
       const filePath = path.join(this.LOGS_DIR, fileName);
       try {
