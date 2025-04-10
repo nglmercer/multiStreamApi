@@ -1,6 +1,7 @@
 const { WebcastPushConnection, signatureProvider } = require('tiktok-live-connector');
 const  { createClient } = require('@retconned/kick-js'); 
 const WindowManager = require('../BActions/WindowManager');
+const setupBasedata = require('../store/setupBasedata');
 const windowManager = new WindowManager();
 class RoomManager {
     constructor(io) {
@@ -125,6 +126,7 @@ class TiktokConnection extends PlatformConnection {
 
       this.tiktokLiveConnection.on(event, (data) => {
         socket.emit(event, data);  // Emit directly to the socket
+        setupBasedata.setupBasedata(data, event);
         if (event === 'disconnected') {
           console.log(`TikTok ${event} event for ${this.uniqueId}`);
           this.isConnected = false;

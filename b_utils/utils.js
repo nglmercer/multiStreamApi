@@ -270,77 +270,102 @@ const getDataByURL = async (url, cb) => {
 };
 
 class Logger {
-    constructor() {
-        this.LOGS_DIR = path.join(process.cwd(), "logs");
-        this.ensureLogsDirExists();
-    }
+  constructor(options = {}) {
+      this.LOGS_DIR = path.join(process.cwd(), "logs");
+      this.enabled = options.enabled !== undefined ? options.enabled : true;
+      this.ensureLogsDirExists();
+  }
 
-    // Crear directorio de logs si no existe
-    ensureLogsDirExists() {
-        if (!fs.existsSync(this.LOGS_DIR)) {
-            fs.mkdirSync(this.LOGS_DIR, { recursive: true });
-        }
-    }
+  // Crear directorio de logs si no existe
+  ensureLogsDirExists() {
+      if (!fs.existsSync(this.LOGS_DIR)) {
+          fs.mkdirSync(this.LOGS_DIR, { recursive: true });
+      }
+  }
 
-    // Formatear la hora actual
-    getTimeFormatted() {
-        const dateTime = new Date();
-        return `[${dateTime.getHours().toString().padStart(2, "0")}:${dateTime.getMinutes().toString().padStart(2, "0")}:${dateTime.getSeconds().toString().padStart(2, "0")}.${dateTime.getMilliseconds().toString().padStart(3, "0")}]`;
-    }
+  // Activar o desactivar los logs
+  enable(value = true) {
+      this.enabled = value;
+      return this;
+  }
 
-    // Obtener el nombre del archivo de log
-    getLastLogFileName() {
-        const dateTime = new Date();
-        return `${dateTime.getDate().toString().padStart(2, "0")}-${(dateTime.getMonth() + 1).toString().padStart(2, "0")}-${dateTime.getFullYear()}.log`;
-    }
+  // Verificar si los logs están habilitados
+  isEnabled() {
+      return this.enabled;
+  }
 
-    // Escribir una línea en el archivo de log
-    async writeLineToLog(line) {
-        const fileName = this.getLastLogFileName();
-        const filePath = path.join(this.LOGS_DIR, fileName);
+  // Formatear la hora actual
+  getTimeFormatted() {
+      const dateTime = new Date();
+      return `[${dateTime.getHours().toString().padStart(2, "0")}:${dateTime.getMinutes().toString().padStart(2, "0")}:${dateTime.getSeconds().toString().padStart(2, "0")}.${dateTime.getMilliseconds().toString().padStart(3, "0")}]`;
+  }
 
-        try {
-            await fs.promises.appendFile(filePath, `${line}\n`);
-        } catch (err) {
-            console.error(colors.red(`Error writing to log file: ${err.message}`));
-        }
-    }
+  // Obtener el nombre del archivo de log
+  getLastLogFileName() {
+      const dateTime = new Date();
+      return `${dateTime.getDate().toString().padStart(2, "0")}-${(dateTime.getMonth() + 1).toString().padStart(2, "0")}-${dateTime.getFullYear()}.log`;
+  }
 
-    // Función auxiliar para formatear y registrar mensajes
-    async logMessage(level, colorFn, ...text) {
-      const preparedText = `${this.getTimeFormatted()} ${level ? `[${level}] ` : ""}${text.join(" ")}`;
-      
+  // Escribir una línea en el archivo de log
+  async writeLineToLog(line) {
+      if (!this.enabled) return;
+
+      const fileName = this.getLastLogFileName();
+      const filePath = path.join(this.LOGS_DIR, fileName);
+      try {
+          await fs.promises.appendFile(filePath, `${line}\n`);
+      } catch (err) {
+          console.error(colors.red(`Error writing to log file: ${err.message}`));
+      }
+  }
+
+  // Función auxiliar para formatear y registrar mensajes
+  async logMessage(level, colorFn, ...text) {
+      if (!this.enabled) return;
+
+      // Asegurarse de que los textos sean strings, no promesas
+      const resolvedTexts = await Promise.all(text.map(async (item) => {
+          if (item instanceof Promise) {
+              return await item;
+          }
+          return item;
+      }));
+
+      const preparedText = `${this.getTimeFormatted()} ${level ? `[${level}] ` : ""}${resolvedTexts.join(" ")}`;
+   
       // Mostrar en consola con color
       console.log(colorFn ? colorFn(preparedText) : preparedText);
-  
+
       // Escribir en el log sin colores
       await this.writeLineToLog(stripAnsi(preparedText));
   }
 
-    // Registrar mensajes de log
-    log(...text) {
-        return this.logMessage("", null, ...text);
-    }
+  // Registrar mensajes de log
+  async log(...text) {
+      await this.logMessage("", null, ...text);
+  }
 
-    // Registrar mensajes de advertencia
-    warning(...text) {
-        return this.logMessage("WARN", colors.yellow, ...text);
-    }
-    warn(...text) {
-        return this.logMessage("WARN", colors.yellow, ...text);
-    }
-    // Registrar mensajes de error
-    error(...text) {
-        return this.logMessage("ERR", colors.red, ...text);
-    }
+  // Registrar mensajes de advertencia
+  async warning(...text) {
+      await this.logMessage("WARN", colors.yellow, ...text);
+  }
 
-    // Mostrar mensaje de bienvenida
-    WelcomeMessage() {
-        console.log("");
-        console.log(colors.cyan("your logo ASCII art here"));
-        console.log("");
-        console.log("");
-    }
+  async warn(...text) {
+      await this.logMessage("WARN", colors.yellow, ...text);
+  }
+
+  // Registrar mensajes de error
+  async error(...text) {
+      await this.logMessage("ERR", colors.red, ...text);
+  }
+
+  // Mostrar mensaje de bienvenida
+  WelcomeMessage() {
+      console.log("");
+      console.log(colors.cyan("your logo ASCII art here"));
+      console.log("");
+      console.log("");
+  }
 }
 const isObjectsValid = (...objects) => {
   let validCount = 0;
