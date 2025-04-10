@@ -73,7 +73,6 @@ async function setupBasedata(data, event) { // Pasa las dependencias
         }
         // El evento 'roomUser' tiene una estructura diferente (array de usuarios)
         else if (event === 'roomUser' && data && Array.isArray(data.topViewers)) {
-            console.log(`[roomUser] Processing ${data.topViewers.length} top viewers...`);
             for (const viewer of data.topViewers) {
                 if (viewer.user) {
                     // Pasamos el objeto 'user' que tiene la estructura esperada
