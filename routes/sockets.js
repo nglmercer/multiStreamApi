@@ -141,7 +141,12 @@ class TiktokConnection extends PlatformConnection {
 
     this.eventHandlersInitialized = true;
   }
-
+  getAvailableGifts() {
+    return this.tiktokLiveConnection.getAvailableGifts();
+  }
+  getRoomInfo() {
+    return this.tiktokLiveConnection.getRoomInfo();
+  }
   disconnect() {
       if (this.tiktokLiveConnection) {
           this.tiktokLiveConnection.disconnect();
@@ -218,7 +223,8 @@ async function getOrCreatePlatformConnection(platform, uniqueId, socket) {
   console.log(`getOrCreatePlatformConnection: ${platform} ${normalizedId}`, connections);
   // Verificar conexión existente
   let connection = connections.get(normalizedId);
-  if (connection) {
+
+  if (connection && socket) {
       if (!connection.isConnected) {
           try {
               await connection.connect(socket);
@@ -234,10 +240,12 @@ async function getOrCreatePlatformConnection(platform, uniqueId, socket) {
   } else {
     try {
       connection = platform === PlatformType.TIKTOK ?
-          new TiktokConnection(normalizedId, { socketId: socket.id }) :
-          new KickConnection(normalizedId, { socketId: socket.id });
+          new TiktokConnection(normalizedId) :
+          new KickConnection(normalizedId);
         console.log(`conexión: ${platform} ${normalizedId}`);
-        await connection.connect(socket);
+        if (socket) {
+          await connection.connect(socket);
+        }
         connections.set(normalizedId, connection);
         return connection;
     } catch (err) {
@@ -257,7 +265,8 @@ function getAllConnectionsInfo() {
               platform,
               uniqueId: connection.uniqueId,
               isConnected: connection.isConnected,
-              state: connection.getState()
+              state: connection.getState(),
+              uId: uniqueId
           });
       });
   });
@@ -301,7 +310,7 @@ async function IOinit(io, roomManager) {
         console.log('A user connected:', socket.id, "disponible connections",Livescreated);
         socket.emit('allConnections', getAllConnectionsInfo());
         socket.emit('shortcuts-event', getshortcuts());
-        socket.on('joinRoom', async ({ platform, uniqueId }) => {
+        socket.on('join-platform', async ({ platform, uniqueId }) => {
           try {
             if (!Object.values(PlatformType).includes(platform)) {
               throw new Error('Invalid platform specified');
@@ -322,6 +331,36 @@ async function IOinit(io, roomManager) {
             });
           }
         });
+        socket.on('getRoomInfo', async ({ platform, uniqueId }) => {
+          try {
+            const connectionPlatform = await getOrCreatePlatformConnection(platform, uniqueId);
+            if (connectionPlatform && connectionPlatform.getRoomInfo) {
+              const roomInfo = await connectionPlatform.getRoomInfo();
+              console.log("roomInfo", roomInfo);
+              socket.emit('roomInfo', roomInfo);
+            }
+          } catch (error) {
+            socket.emit('message', {
+              type: 'error',
+              message: error.message
+            });
+          }
+        });
+        socket.on('getAvailableGifts', async ({ platform, uniqueId }) => {
+          try {
+              const connectionPlatform = await getOrCreatePlatformConnection(platform, uniqueId)
+              if (connectionPlatform && connectionPlatform.getAvailableGifts) {
+                const availableGifts = await connectionPlatform.getAvailableGifts();
+                console.log("availableGifts", availableGifts);
+                socket.emit('availableGifts', availableGifts);
+              }
+          } catch (error) {
+            socket.emit('message', {
+              type: 'error',
+              message: error.message
+            });
+          }
+        });
         socket.on('join-room', (roomId) => {
           const roomInfo = roomManager.joinRoom(socket, roomId);
           
@@ -331,6 +370,7 @@ async function IOinit(io, roomManager) {
             usersCount: roomInfo.usersCount
           });
         });
+        
         socket.on('update-window', ({ id, config }) => {
           windowManager.updateWindow(id, config);
         });
@@ -374,5 +414,7 @@ async function IOinit(io, roomManager) {
 }
 module.exports = {
     IOinit,
-    RoomManager
+    RoomManager,
+    platformConnections,
+    getOrCreatePlatformConnection
 }
