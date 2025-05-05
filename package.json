@@ -1,7 +1,7 @@
 {
   "scripts": {
-    "start": "node express.js",
-    "dev": "nodemon express.js"
+    "start": "node index.js",
+    "dev": "nodemon index.js"
   },
   "dependencies": {
     "@retconned/kick-js": "^0.5.2",
