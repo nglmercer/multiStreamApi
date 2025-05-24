@@ -304,6 +304,9 @@ function getshortcuts() {
     "pressKey2": "f2"
   };
 }
+function handleActions(socket, data) {
+  console.log("handleActions", data.type,data.event);
+}
 async function IOinit(io, roomManager) {
     io.on('connection', (socket) => {
         checkAndReconnectConnections(socket);
@@ -336,7 +339,6 @@ async function IOinit(io, roomManager) {
             const connectionPlatform = await getOrCreatePlatformConnection(platform, uniqueId);
             if (connectionPlatform && connectionPlatform.getRoomInfo) {
               const roomInfo = await connectionPlatform.getRoomInfo();
-              console.log("roomInfo", roomInfo);
               socket.emit('roomInfo', roomInfo);
             }
           } catch (error) {
@@ -351,7 +353,6 @@ async function IOinit(io, roomManager) {
               const connectionPlatform = await getOrCreatePlatformConnection(platform, uniqueId)
               if (connectionPlatform && connectionPlatform.getAvailableGifts) {
                 const availableGifts = await connectionPlatform.getAvailableGifts();
-                console.log("availableGifts", availableGifts);
                 socket.emit('availableGifts', availableGifts);
               }
           } catch (error) {
@@ -398,6 +399,7 @@ async function IOinit(io, roomManager) {
         socket.on("toggle-shortcuts", (enabled) => toggleShortcuts(enabled));
         socket.on("presskey", (key) => handleKeyPress(socket, key));
         socket.on("pressKey2", (key) => handleKeyPress2(socket, key));
+        socket.on("actions", (data) => handleActions(socket, data));
         socket.on('disconnect', () => {
           // Limpiar todas las salas donde estaba el usuario
           for (const [roomId, users] of roomManager.rooms.entries()) {
