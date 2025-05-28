@@ -46,7 +46,7 @@ signatureProvider.config.extraParams.apiKey = "NmYzMGMwNmMzODQ5YmUxYjkzNTI0OTIyM
 // Mapa para guardar las instancias de TikTokLiveControl por sala
 const Livescreated = new Map();
 
-const LiveEvents = ['ready', 'ChatMessage', 'Subscription', 'disconnected', 'login','close'];
+const KickLiveEvents = ['ready', 'ChatMessage', 'Subscription', 'disconnected', 'login','close'];
 const tiktokLiveEvents = [
     'chat', 'gift', 'connected', 'disconnected',
     'websocketConnected', 'error', 'member', 'roomUser',
@@ -101,14 +101,18 @@ class TiktokConnection extends PlatformConnection {
 
   async connect(socket) {
       try {
-          const state = await this.tiktokLiveConnection.connect();
-          this.isConnected = true;
-          this.state = state;
-          this.initializeEventHandlers(socket);
-          if (socket) {
-              socket.emit('connected', this.getState());
-          }
-          return state;
+          await this.tiktokLiveConnection.connect().then(() => {
+            this.isConnected = true;
+            this.state = state;
+            this.initializeEventHandlers(socket);
+            if (socket) {
+                socket.emit('connected', this.getState());
+            }
+          }).catch(err => {
+              console.error(`Failed to connect to TikTok live room: ${this.uniqueId}`, err);
+              throw new Error(`Connection error: ${err.message}`);
+          });
+          return this.state;
       } catch (err) {
           console.error('Failed to connect to TikTok:', err);
           if (socket) {
@@ -121,9 +125,6 @@ class TiktokConnection extends PlatformConnection {
   initializeEventHandlers(socket, platform, uniqueId) {
     console.log("initializeEventHandlers", platform, uniqueId);
     tiktokLiveEvents.forEach(event => {
-      // Remove previous listeners
-      this.tiktokLiveConnection.removeAllListeners(event);
-
       this.tiktokLiveConnection.on(event, (data) => {
         socket.emit(event, data);  // Emit directly to the socket
         setupBasedata.setupBasedata(data, event);
@@ -189,7 +190,7 @@ class KickConnection extends PlatformConnection {
   initializeEventHandlers(socket) {
     // Unbind previous event listeners if they exist
     console.log("initializeEventHandlers");
-    LiveEvents.forEach(event => {
+    KickLiveEvents.forEach(event => {
       this.kickliveconnector.on(event, (data) => {
         socket.emit(event, data);  // Emit directly to the socket
         console.log(`Kick ${event}`, data);
